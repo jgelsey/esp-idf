@@ -19,21 +19,10 @@
 #include "protocol_examples_common.h"
 #include "esp_tls_crypto.h"
 #include <esp_http_server.h>
-#include "driver/gpio.h"
-// #include "driver/adc.h"
-#include "esp_adc/adc_continuous.h"
-// #include "esp_adc_cal.h"
-#include "esp_adc/adc_cali.h"
-#include "esp_adc/adc_cali_scheme.h"
-#include "math.h"
 
 /* A simple example that demonstrates how to create GET and POST
  * handlers for the web server.
  */
-static uint8_t s_led_state = 0;
-uint32_t reading;
-uint32_t voltage;
-char voltage_txt[5];
 
 static const char *TAG = "example";
 
@@ -162,9 +151,6 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     char*  buf;
     size_t buf_len;
 
-    ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
-    s_led_state = !s_led_state;
-
     /* Get header value string length and allocate memory for length + 1,
      * extra byte for null termination */
     buf_len = httpd_req_get_hdr_value_len(req, "Host") + 1;
@@ -217,25 +203,13 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
         free(buf);
     }
 
-    char* led_state_string="OFF";
-
-    led_state_string = (s_led_state == true ? "ON" : "OFF");
-    ESP_LOGI(TAG, "s_led_state is: %i", s_led_state);
-    ESP_LOGI(TAG, "led state string is: %s",led_state_string);
-
     /* Set some custom headers */
     httpd_resp_set_hdr(req, "Custom-Header-1", "Custom-Value-1");
     httpd_resp_set_hdr(req, "Custom-Header-2", "Custom-Value-2");
 
     /* Send response with custom headers and body set as the
      * string passed in user context*/
-    char foo[100];
-    strcpy(foo,req->user_ctx);
-    strcat(foo,led_state_string);
-
-    // const char* resp_str = (const char*) req->user_ctx;
-    const char* resp_str = (const char*) foo;
-
+    const char* resp_str = (const char*) req->user_ctx;
     httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
 
     /* After sending the HTTP response the old HTTP request
@@ -252,43 +226,7 @@ static const httpd_uri_t hello = {
     .handler   = hello_get_handler,
     /* Let's pass response string in user
      * context to demonstrate it's usage */
-    .user_ctx  = "EV Charger is: "
-};
-
-/* An HTTP GET handler for reading ADC */
-static esp_err_t hello_adc_handler(httpd_req_t *req)
-{
-    /* Set some custom headers */
-    httpd_resp_set_hdr(req, "Custom-Header-1", "Custom-Value-1");
-    httpd_resp_set_hdr(req, "Custom-Header-2", "Custom-Value-2");
-
-    /* Send response with custom headers and body set as the
-     * string passed in user context*/
-    char foo[100];
-    strcpy(foo,req->user_ctx);
-    sprintf(voltage_txt,"%lu",voltage);
-    strcat(foo,voltage_txt);
-
-    // const char* resp_str = (const char*) req->user_ctx;
-    const char* resp_str = (const char*) foo;
-
-    httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
-
-    /* After sending the HTTP response the old HTTP request
-     * headers are lost. Check if HTTP request headers can be read now. */
-    // if (httpd_req_adc_hdr_value_len(req, "Host") == 0) {
-    //     ESP_LOGI(TAG, "Request headers lost");
-    // }
-    return ESP_OK;
-}
-
-static const httpd_uri_t adc = {
-    .uri       = "/adc",
-    .method    = HTTP_GET,
-    .handler   = hello_adc_handler,
-    /* Let's pass response string in user
-     * context to demonstrate it's usage */
-    .user_ctx  = "ADC value is: "
+    .user_ctx  = "Hello World!"
 };
 
 /* An HTTP POST handler */
@@ -412,7 +350,6 @@ static httpd_handle_t start_webserver(void)
         // Set URI handlers
         ESP_LOGI(TAG, "Registering URI handlers");
         httpd_register_uri_handler(server, &hello);
-        httpd_register_uri_handler(server, &adc);
         httpd_register_uri_handler(server, &echo);
         httpd_register_uri_handler(server, &ctrl);
         #if CONFIG_EXAMPLE_BASIC_AUTH
@@ -425,10 +362,10 @@ static httpd_handle_t start_webserver(void)
     return NULL;
 }
 
-static void stop_webserver(httpd_handle_t server)
+static esp_err_t stop_webserver(httpd_handle_t server)
 {
     // Stop the httpd server
-    httpd_stop(server);
+    return httpd_stop(server);
 }
 
 static void disconnect_handler(void* arg, esp_event_base_t event_base,
@@ -437,8 +374,11 @@ static void disconnect_handler(void* arg, esp_event_base_t event_base,
     httpd_handle_t* server = (httpd_handle_t*) arg;
     if (*server) {
         ESP_LOGI(TAG, "Stopping webserver");
-        stop_webserver(*server);
-        *server = NULL;
+        if (stop_webserver(*server) == ESP_OK) {
+            *server = NULL;
+        } else {
+            ESP_LOGE(TAG, "Failed to stop http server");
+        }
     }
 }
 
@@ -452,204 +392,33 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
     }
 }
 
-// ***** function calls ******
-int compare (const void * a, const void * b) {
-   return ( *(int*)a - *(int*)b );
-}
-// ************
-float getVrms2()
-{   
-    return 5.0;
-}
-float getVrms()
-{
-    #define ALPHA .1
-    #define DISCARD 40
-    #define R1 1014   //voltage divider resistor R1 in kΩ
-    #define R2 990   //voltage divider resistor R1 in kΩ
-    #define Vcc 5.0
-    #define ACS712_Vcc  4.81  //voltage range of current sensor
-    #define ATTEN_DB_11 3.9 // DB11 is a 3.9V full range
-
-    double mVperAmp = 66.0;           // this the 30A version of the ACS712 -use 100 for 20A Module and 66 for 30A Module divided down by voltage divider
-    double Resistor_Divider = R2;
-    Resistor_Divider = Resistor_Divider / (R1+R2);
-    mVperAmp=mVperAmp*Resistor_Divider;
-    //double Watts = 0;
-    //double VoltagePP = 0;
-    //double VRMS = 0;
-    //double AmpsRMS = 0;
-
-    //float VppI,VppV;//,Vdc;
-    //int Vpp_bits;
-    // uint32_t counter=0;//,readValueI=0,readValueV=0,readRawValue=0,lastreadValueI=0,lastreadValueV=0,accumulated_readValueI=0,accumulated_readValueV=0; 
-    // Current Now = alpha * Current Now + (1 – alpha) * Last Current Reading - ("complementary filter")
-    //uint32_t maxValueI=0, maxValueV=0;             // store max value here
-    //uint32_t minValueI=4096, minValueV=4096;          // store min value here ESP32 ADC resolution
-    // uint32_t I[5000];// ,V[5000]; //,IFullWave[5000],VFullWave[5000];  // array for reads from ADCs
-    // int zero_crossings[5000];
-    // float Vq=Vcc*Resistor_Divider;
-
-    // uint32_t start_time = esp_log_timestamp();
-    int adc_raw=1;
-    int median_voltage=-1;
-    int i;
-    int counter=0;
-    // int voltage[1000];
-    // for (i=0;i<1000;i++) voltage[i]=0;  // initialize array
-
-    // adc_cali_handle_t handle;
-    // ESP_LOGI(TAG, "calibration scheme version is %s", "Line Fitting");
-    // adc_cali_line_fitting_config_t cali_config = {
-    //     .unit_id = ADC_UNIT_1,
-    //     .atten = ADC_ATTEN_DB_11,
-    //     .bitwidth = ADC_BITWIDTH_12,
-    // };
-    // ESP_ERROR_CHECK(adc_cali_create_scheme_line_fitting(&cali_config, &handle));
-
-    // ESP_LOGI(TAG, "esp_log_timestamp(): %li start_time: %li", esp_log_timestamp(), start_time);
-
-    i=0;
-    // while((esp_log_timestamp()-start_time) < 1000) //sample for 1000 mS (~60 cycles)
-    // { 
-    //     voltage[i]=-1;
-    //     // ESP_ERROR_CHECK(adc_cali_raw_to_voltage(handle, adc_raw, &voltage[i++]));
-    //     // ESP_LOGI(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", ADC_UNIT_1 + 1, ADC_CHANNEL_7, voltage[i]);
-    //     // I[counter]=0; //esp_adc_cal_raw_to_voltage(adc1_get_raw(ADC1_CHANNEL_7),adc_chars);
-    //     // //  V[counter]=esp_adc_cal_raw_to_voltage(adc1_get_raw(ADC1_CHANNEL_6),adc_chars);
-    //     counter++;
-    // }
-    // qsort(voltage, counter, sizeof(int), compare);  // sort the voltage array
-    // median_voltage=voltage[counter/2];
-    // ESP_LOGI(TAG, "median_voltage: %i",median_voltage);
-
-    // calculate RMS
-    int Vac,bitflip=2;
-    float Vrms=0.0;
-    // Vrms=voltage[0]-median_voltage;
-    // for (i=1;i<counter;i++) {
-    //     Vac=voltage[i]-median_voltage;
-    //     Vrms+=(Vac*Vac);
-    //     if (Vac^(voltage[i-1])) {bitflip++;}
-    // }
-    // Vrms=sqrt(Vrms/(bitflip>>1)); // sqrt Vrms divided by number of cycle
-    ESP_LOGI(TAG, "finished getVrms()");
-    Vrms=5.0;
-    return Vrms;
-}
-// ************
 
 void app_main(void)
 {
-static httpd_handle_t server = NULL;
+    static httpd_handle_t server = NULL;
 
-ESP_ERROR_CHECK(nvs_flash_init());
-ESP_ERROR_CHECK(esp_netif_init());
-ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
 
- // This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
- // * Read "Establishing Wi-Fi or Ethernet Connection" section in
- // * examples/protocols/README.md for more information about this function.
- 
-// ESP_ERROR_CHECK(example_connect());
+    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
+     * Read "Establishing Wi-Fi or Ethernet Connection" section in
+     * examples/protocols/README.md for more information about this function.
+     */
+    ESP_ERROR_CHECK(example_connect());
 
- // Register event handlers to stop the server when Wi-Fi or Ethernet is disconnected,
- // * and re-start it upon connection.
- 
+    /* Register event handlers to stop the server when Wi-Fi or Ethernet is disconnected,
+     * and re-start it upon connection.
+     */
 #ifdef CONFIG_EXAMPLE_CONNECT_WIFI
-ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
-ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &connect_handler, &server));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &disconnect_handler, &server));
 #endif // CONFIG_EXAMPLE_CONNECT_WIFI
 #ifdef CONFIG_EXAMPLE_CONNECT_ETHERNET
-ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &connect_handler, &server));
-ESP_ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ETHERNET_EVENT_DISCONNECTED, &disconnect_handler, &server));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, &connect_handler, &server));
+    ESP_ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ETHERNET_EVENT_DISCONNECTED, &disconnect_handler, &server));
 #endif // CONFIG_EXAMPLE_CONNECT_ETHERNET
 
- // Start the server for the first time 
-server = start_webserver();
-ESP_LOGI(TAG, "Started webserver!!!");
-
-// initialize relay control GPIO
-// #define GPIO_PIN 18
-
-// gpio_reset_pin(GPIO_PIN);
-//  // Set the GPIO as a push/pull output 
-// gpio_set_direction(GPIO_PIN, GPIO_MODE_OUTPUT);
-// gpio_set_level(GPIO_PIN, false);
-
-// static uint8_t s_led_state = 0;
-
-// Initialize current sensor input
-// adc1_config_width(ADC_WIDTH_BIT_12);
-// adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_11);  // 11 gives full-scale voltage of 3.9V
-
- // Block for 500ms. 
-// ESP_LOGI(TAG, "portTICK_PERIOD_MS is: '%d'", portTICK_PERIOD_MS);
-
-//Characterize ADC at particular atten
-// #define DEFAULT_VREF 1295
-// esp_adc_cal_characteristics_t *adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
-// esp_adc_cal_value_t val_type = esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
-
-// esp_err_t adc_cali_create_scheme_line_fitting(const adc_cali_line_fitting_config_t *config, adc_cali_handle_t *ret_handle);
-
-
-
-
-
-//Check type of calibration value used to characterize ADC
-// if (val_type == ESP_ADC_CAL_VAL_EFUSE_VREF) {
-//     printf("eFuse Vref\n");
-// } else if (val_type == ESP_ADC_CAL_VAL_EFUSE_TP) {
-//     printf("Two Point\n");
-// } else {
-//     printf("Default\n");
-// }
-
- // *****  
- 
-// void loop() {
-//   // Serial.println (""); 
-//   Voltage = getVPP();
-  // VRMS = (Voltage/2.0) *0.707;   //root 1/2 is 0.707
-//   AmpsRMS = ((VRMS * 1000)/mVperAmp)-0.3; //0.3 is the error I got for my sensor
- 
-//   // Serial.print(AmpsRMS);
-//   // Serial.print(" Amps RMS  ---  ");
-//   Watt = (AmpsRMS*240/1.2);
-//   // note: 1.2 is my own empirically established calibration factor
-// // as the voltage measured at A0 depends on the length of the OUT-to-A0 wire
-// // 240 is the main AC power voltage – this parameter changes locally
- 
-// delay (100);
-// }
- 
-    // start loop 
-const TickType_t xDelay = 500;// / portTICK_PERIOD_MS;
-while (1) {
-    #define VoltageOffset_off 18  // 18mV of noise with no current
-    #define VoltageOffset_on 120  // 120mV of noise with current 
-    // reading =  adc1_get_raw(ADC1_CHANNEL_7);
-    // voltage = esp_adc_cal_raw_to_voltage(reading, adc_chars);    
-    // VoltagePP = getVPP();
-    ESP_LOGI(TAG, "Calling getVrms()");
-    float Vrms = getVrms();
-    // if (VoltagePP >50) VoltagePP-=VoltageOffset_on;  //adjust for noise
-    // else VoltagePP-=VoltageOffset_off;
-    // VRMS = VoltagePP/(sqrt(2)*2); 
-    // float Arms = Vrms/mVperAmp; 
-// 
-    // Watts = Arms*121; // measured line voltage on shop bench
-
-    // ESP_LOGI(TAG, "Resistor_Divider:%lf    mVperAmp:%lf    VRMS:%lf   AmpsRMS: %lf   Watts: %f",Resistor_Divider,mVperAmp,Vrms/1000 ,Arms,Watts);
-    ESP_LOGI(TAG, "VRMS:%lf",Vrms/1000);
-
-    // ESP_LOGI(TAG, "%s: voltage on ADC1_CHANNEL_7:%lf  Amps:%lf  Watts:%d",s_led_state == true ? "ON" : "OFF",Voltage, Amps, abs(Watts));
-
-    // Toggle the LED state 
-    // ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
-    // gpio_set_level(GPIO_PIN, s_led_state);
-
-    vTaskDelay(xDelay);
- }
+    /* Start the server for the first time */
+    server = start_webserver();
 }
