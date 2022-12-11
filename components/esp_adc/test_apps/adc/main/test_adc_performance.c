@@ -173,10 +173,10 @@ TEST_CASE("ADC1 oneshot raw average / std_deviation", "[adc_oneshot][ignore][man
         }
 
         if (do_calibration) {
-            uint32_t raw = s_get_average();
+            uint32_t raw = 2048; //s_get_average();
             int voltage_mv = 0;
             TEST_ESP_OK(adc_cali_raw_to_voltage(cali_handle[i], raw, &voltage_mv));
-            printf("Voltage = %d mV\n", voltage_mv);
+            printf("Raw Voltage = %lx        Voltage = %x mV\n", raw, voltage_mv);
         }
     }
 

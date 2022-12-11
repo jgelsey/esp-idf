@@ -33,6 +33,8 @@ esp_err_t adc_cali_check_scheme(adc_cali_scheme_ver_t *scheme_mask)
 
     ESP_RETURN_ON_FALSE((*scheme_mask) != 0, ESP_ERR_NOT_SUPPORTED, TAG, "no supported calibration scheme yet");
 
+    ESP_LOGI(TAG,"scheme_mask: %x",*scheme_mask);
+
     return ESP_OK;
 }
 
