@@ -1,0 +1,44 @@
+-- IDF_TARGET not set, using default target: esp32
+-- Found Git: /usr/bin/git (found version "2.37.1 (Apple Git-137.1)") 
+-- The C compiler identification is GNU 11.2.0
+-- The CXX compiler identification is GNU 11.2.0
+-- The ASM compiler identification is GNU
+-- Found assembler: /Users/jon/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /Users/jon/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /Users/jon/.espressif/tools/xtensa-esp32-elf/esp-2022r1-11.2.0/xtensa-esp32-elf/bin/xtensa-esp32-elf-g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Building ESP-IDF components for target esp32
+-- Project sdkconfig file /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/sdkconfig
+-- Looking for sys/types.h
+-- Looking for sys/types.h - found
+-- Looking for stdint.h
+-- Looking for stdint.h - found
+-- Looking for stddef.h
+-- Looking for stddef.h - found
+-- Check size of time_t
+-- Check size of time_t - done
+-- Found Python3: /Users/jon/.espressif/python_env/idf5.0_py3.9_env/bin/python (found version "3.9.6") found components: Interpreter 
+-- Performing Test C_COMPILER_SUPPORTS_WFORMAT_SIGNEDNESS
+-- Performing Test C_COMPILER_SUPPORTS_WFORMAT_SIGNEDNESS - Success
+-- App "simple" version: v5.0-dirty
+-- Adding linker script /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/esp-idf/esp_system/ld/memory.ld
+-- Adding linker script /Users/jon/esp/esp-idf-v5.0/components/esp_system/ld/esp32/sections.ld.in
+-- Adding linker script /Users/jon/esp/esp-idf-v5.0/components/esp_rom/esp32/ld/esp32.rom.ld
+-- Adding linker script /Users/jon/esp/esp-idf-v5.0/components/esp_rom/esp32/ld/esp32.rom.api.ld
+-- Adding linker script /Users/jon/esp/esp-idf-v5.0/components/esp_rom/esp32/ld/esp32.rom.libgcc.ld
+-- Adding linker script /Users/jon/esp/esp-idf-v5.0/components/esp_rom/esp32/ld/esp32.rom.newlib-data.ld
+-- Adding linker script /Users/jon/esp/esp-idf-v5.0/components/esp_rom/esp32/ld/esp32.rom.syscalls.ld
+-- Adding linker script /Users/jon/esp/esp-idf-v5.0/components/esp_rom/esp32/ld/esp32.rom.newlib-funcs.ld
+-- Adding linker script /Users/jon/esp/esp-idf-v5.0/components/soc/esp32/ld/esp32.peripherals.ld
+-- Components: app_trace app_update bootloader bootloader_support bt cmock console cxx driver efuse esp-tls esp_adc esp_app_format esp_common esp_eth esp_event esp_gdbstub esp_hid esp_http_client esp_http_server esp_https_ota esp_https_server esp_hw_support esp_lcd esp_local_ctrl esp_netif esp_partition esp_phy esp_pm esp_psram esp_ringbuf esp_rom esp_system esp_timer esp_wifi espcoredump esptool_py fatfs freertos hal heap http_parser idf_test ieee802154 json log lwip main mbedtls mqtt newlib nvs_flash openthread partition_table perfmon protobuf-c protocol_examples_common protocomm pthread sdmmc soc spi_flash spiffs tcp_transport ulp unity usb vfs wear_levelling wifi_provisioning wpa_supplicant xtensa
+-- Component paths: /Users/jon/esp/esp-idf-v5.0/components/app_trace /Users/jon/esp/esp-idf-v5.0/components/app_update /Users/jon/esp/esp-idf-v5.0/components/bootloader /Users/jon/esp/esp-idf-v5.0/components/bootloader_support /Users/jon/esp/esp-idf-v5.0/components/bt /Users/jon/esp/esp-idf-v5.0/components/cmock /Users/jon/esp/esp-idf-v5.0/components/console /Users/jon/esp/esp-idf-v5.0/components/cxx /Users/jon/esp/esp-idf-v5.0/components/driver /Users/jon/esp/esp-idf-v5.0/components/efuse /Users/jon/esp/esp-idf-v5.0/components/esp-tls /Users/jon/esp/esp-idf-v5.0/components/esp_adc /Users/jon/esp/esp-idf-v5.0/components/esp_app_format /Users/jon/esp/esp-idf-v5.0/components/esp_common /Users/jon/esp/esp-idf-v5.0/components/esp_eth /Users/jon/esp/esp-idf-v5.0/components/esp_event /Users/jon/esp/esp-idf-v5.0/components/esp_gdbstub /Users/jon/esp/esp-idf-v5.0/components/esp_hid /Users/jon/esp/esp-idf-v5.0/components/esp_http_client /Users/jon/esp/esp-idf-v5.0/components/esp_http_server /Users/jon/esp/esp-idf-v5.0/components/esp_https_ota /Users/jon/esp/esp-idf-v5.0/components/esp_https_server /Users/jon/esp/esp-idf-v5.0/components/esp_hw_support /Users/jon/esp/esp-idf-v5.0/components/esp_lcd /Users/jon/esp/esp-idf-v5.0/components/esp_local_ctrl /Users/jon/esp/esp-idf-v5.0/components/esp_netif /Users/jon/esp/esp-idf-v5.0/components/esp_partition /Users/jon/esp/esp-idf-v5.0/components/esp_phy /Users/jon/esp/esp-idf-v5.0/components/esp_pm /Users/jon/esp/esp-idf-v5.0/components/esp_psram /Users/jon/esp/esp-idf-v5.0/components/esp_ringbuf /Users/jon/esp/esp-idf-v5.0/components/esp_rom /Users/jon/esp/esp-idf-v5.0/components/esp_system /Users/jon/esp/esp-idf-v5.0/components/esp_timer /Users/jon/esp/esp-idf-v5.0/components/esp_wifi /Users/jon/esp/esp-idf-v5.0/components/espcoredump /Users/jon/esp/esp-idf-v5.0/components/esptool_py /Users/jon/esp/esp-idf-v5.0/components/fatfs /Users/jon/esp/esp-idf-v5.0/components/freertos /Users/jon/esp/esp-idf-v5.0/components/hal /Users/jon/esp/esp-idf-v5.0/components/heap /Users/jon/esp/esp-idf-v5.0/components/http_parser /Users/jon/esp/esp-idf-v5.0/components/idf_test /Users/jon/esp/esp-idf-v5.0/components/ieee802154 /Users/jon/esp/esp-idf-v5.0/components/json /Users/jon/esp/esp-idf-v5.0/components/log /Users/jon/esp/esp-idf-v5.0/components/lwip /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main /Users/jon/esp/esp-idf-v5.0/components/mbedtls /Users/jon/esp/esp-idf-v5.0/components/mqtt /Users/jon/esp/esp-idf-v5.0/components/newlib /Users/jon/esp/esp-idf-v5.0/components/nvs_flash /Users/jon/esp/esp-idf-v5.0/components/openthread /Users/jon/esp/esp-idf-v5.0/components/partition_table /Users/jon/esp/esp-idf-v5.0/components/perfmon /Users/jon/esp/esp-idf-v5.0/components/protobuf-c /Users/jon/esp/esp-idf/examples/common_components/protocol_examples_common /Users/jon/esp/esp-idf-v5.0/components/protocomm /Users/jon/esp/esp-idf-v5.0/components/pthread /Users/jon/esp/esp-idf-v5.0/components/sdmmc /Users/jon/esp/esp-idf-v5.0/components/soc /Users/jon/esp/esp-idf-v5.0/components/spi_flash /Users/jon/esp/esp-idf-v5.0/components/spiffs /Users/jon/esp/esp-idf-v5.0/components/tcp_transport /Users/jon/esp/esp-idf-v5.0/components/ulp /Users/jon/esp/esp-idf-v5.0/components/unity /Users/jon/esp/esp-idf-v5.0/components/usb /Users/jon/esp/esp-idf-v5.0/components/vfs /Users/jon/esp/esp-idf-v5.0/components/wear_levelling /Users/jon/esp/esp-idf-v5.0/components/wifi_provisioning /Users/jon/esp/esp-idf-v5.0/components/wpa_supplicant /Users/jon/esp/esp-idf-v5.0/components/xtensa
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build

@@ -1,0 +1,35 @@
+[1/9] Performing build step for 'bootloader'
+[1/1] cd /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/bootloader/esp-idf/esptool_py && /Users/jon/.espressif/python_env/idf5.0_py3.9_env/bin/python /Users/jon/esp/esp-idf-v5.0/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/bootloader/bootloader.bin
+Bootloader binary size 0x6710 bytes. 0x8f0 bytes (8%) free.
+[2/9] No install step for 'bootloader'
+[3/9] Completed 'bootloader'
+[4/9] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/main.c.obj
+In file included from /Users/jon/esp/esp-idf-v5.0/components/esp_wifi/include/esp_wifi.h:54,
+                 from /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:10:
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c: In function 'get_Vrms':
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:618:76: warning: passing argument 3 of 'adc_cali_raw_to_voltage' from incompatible pointer type [-Wincompatible-pointer-types]
+  618 |                 ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, Vout, &Vr));
+      |                                                                            ^~~
+      |                                                                            |
+      |                                                                            uint16_t * {aka short unsigned int *}
+/Users/jon/esp/esp-idf-v5.0/components/esp_common/include/esp_err.h:117:30: note: in definition of macro 'ESP_ERROR_CHECK'
+  117 |         esp_err_t err_rc_ = (x);                                        \
+      |                              ^
+In file included from /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:27:
+/Users/jon/esp/esp-idf-v5.0/components/esp_adc/include/esp_adc/adc_cali.h:54:75: note: expected 'int *' but argument is of type 'uint16_t *' {aka 'short unsigned int *'}
+   54 | esp_err_t adc_cali_raw_to_voltage(adc_cali_handle_t handle, int raw, int *voltage);
+      |                                                                      ~~~~~^~~~~~~
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:562:21: warning: unused variable 'Vr' [-Wunused-variable]
+  562 |     int i=0,j=0,V=0,Vr=0;
+      |                     ^~
+[5/9] Linking C static library esp-idf/main/libmain.a
+[6/9] Generating ld/sections.ld
+[7/9] Linking CXX executable simple.elf
+[8/9] Generating binary image from built executable
+esptool.py v4.4
+Creating esp32 image...
+Merged 2 ELF sections
+Successfully created esp32 image.
+Generated /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/simple.bin
+[9/9] cd /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/esp-idf/esptool_py && /Users/jon/.espressif/python_env/idf5.0_py3.9_env/bin/python /Users/jon/esp/esp-idf-v5.0/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/partition_table/partition-table.bin /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/simple.bin
+simple.bin binary size 0x331b0 bytes. Smallest app partition is 0x100000 bytes. 0xcce50 bytes (80%) free.
