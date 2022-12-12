@@ -1,0 +1,55 @@
+[1/9] Performing build step for 'bootloader'
+[1/1] cd /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/bootloader/esp-idf/esptool_py && /Users/jon/.espressif/python_env/idf5.0_py3.9_env/bin/python /Users/jon/esp/esp-idf-v5.0/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x1000 /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/bootloader/bootloader.bin
+Bootloader binary size 0x6720 bytes. 0x8e0 bytes (8%) free.
+[2/9] No install step for 'bootloader'
+[3/9] Completed 'bootloader'
+[4/9] Building C object esp-idf/main/CMakeFiles/__idf_main.dir/main.c.obj
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c: In function 'continuous_adc_init':
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:592:10: warning: unused variable 'do_calibration1' [-Wunused-variable]
+  592 |     bool do_calibration1 = example_adc_calibration_init(ADC_UNIT_1, ADC_ATTEN_DB_0, &adc1_cali_handle);
+      |          ^~~~~~~~~~~~~~~
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c: In function 'get_Vrms':
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:606:14: warning: unused variable 'Vsample' [-Wunused-variable]
+  606 |     uint16_t Vsample=0;
+      |              ^~~~~~~
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:605:17: warning: variable 'V' set but not used [-Wunused-but-set-variable]
+  605 |     int i=0,j=0,V=0;
+      |                 ^
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:605:13: warning: unused variable 'j' [-Wunused-variable]
+  605 |     int i=0,j=0,V=0;
+      |             ^
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:789:26: warning: iteration 512 invokes undefined behavior [-Waggressive-loop-optimizations]
+  789 |         Vac=((int)voltage[i]&0xfff)-median_voltage;
+      |                   ~~~~~~~^~~
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:788:15: note: within this loop
+  788 |     for (i=0;i<number_of_samples;i++) {
+      |              ~^~~~~~~~~~~~~~~~~~
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:782:97: warning: iteration 512 invokes undefined behavior [-Waggressive-loop-optimizations]
+  782 |     Vstr[0]='\0';for (i=0;i<number_of_samples;i++) {sprintf(Vstr+strlen(Vstr),"%x,",voltage_copy[i]);}; ESP_LOGI(TAG,"qsorted voltage_copy :%s",Vstr);
+      |                                                                                     ~~~~~~~~~~~~^~~
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:782:28: note: within this loop
+  782 |     Vstr[0]='\0';for (i=0;i<number_of_samples;i++) {sprintf(Vstr+strlen(Vstr),"%x,",voltage_copy[i]);}; ESP_LOGI(TAG,"qsorted voltage_copy :%s",Vstr);
+      |                           ~^~~~~~~~~~~~~~~~~~
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:769:59: warning: iteration 512 invokes undefined behavior [-Waggressive-loop-optimizations]
+  769 |         sprintf(Vstr+strlen(Vstr),"%i,%i\n",i,voltage_copy[i]);
+      |                                               ~~~~~~~~~~~~^~~
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:768:15: note: within this loop
+  768 |     for (i=0;i<number_of_samples;i++) {
+      |              ~^~~~~~~~~~~~~~~~~~
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:731:62: warning: iteration 512 invokes undefined behavior [-Waggressive-loop-optimizations]
+  731 |         sprintf(Vstr+strlen(Vstr),"%x,",(unsigned int)voltage[i]);
+      |                                                       ~~~~~~~^~~
+/Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/main/main.c:730:15: note: within this loop
+  730 |     for (i=0;i<number_of_samples;i++) {
+      |              ~^~~~~~~~~~~~~~~~~~
+[5/9] Linking C static library esp-idf/main/libmain.a
+[6/9] Generating ld/sections.ld
+[7/9] Linking CXX executable simple.elf
+[8/9] Generating binary image from built executable
+esptool.py v4.4
+Creating esp32 image...
+Merged 2 ELF sections
+Successfully created esp32 image.
+Generated /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/simple.bin
+[9/9] cd /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/esp-idf/esptool_py && /Users/jon/.espressif/python_env/idf5.0_py3.9_env/bin/python /Users/jon/esp/esp-idf-v5.0/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/partition_table/partition-table.bin /Users/jon/esp/esp-idf-v5.0/examples/protocols/http_server/simple/build/simple.bin
+simple.bin binary size 0x32b00 bytes. Smallest app partition is 0x100000 bytes. 0xcd500 bytes (80%) free.

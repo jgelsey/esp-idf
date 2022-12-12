@@ -36,10 +36,11 @@ static uint8_t s_led_state = 0;
 // uint32_t voltage;
 char voltage_txt[5];
 
-#define NUMBER_OF_SAMPLES 100
+#define NUMBER_OF_SAMPLES 2048
 uint16_t voltage[NUMBER_OF_SAMPLES];
 // uint16_t voltage_raw[NUMBER_OF_SAMPLES];
 uint16_t voltage_copy[NUMBER_OF_SAMPLES];
+int32_t timestamp[NUMBER_OF_SAMPLES];
 
 char Vstr[NUMBER_OF_SAMPLES*10]; //leave lots of room - 10 characters for each entry
 // char Vstr_raw[NUMBER_OF_SAMPLES];
@@ -521,7 +522,7 @@ static bool example_adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc
 // ** start setup for adc_continuous
 //
 //
-#define EXAMPLE_READ_LEN   256
+#define EXAMPLE_READ_LEN   2048
 #define GET_UNIT(x)        ((x>>3) & 0x1)
 #define ADC_CONV_MODE       ADC_CONV_SINGLE_UNIT_1  //ESP32 only supports ADC1 DMA mode
 #define ADC_OUTPUT_TYPE     ADC_DIGI_OUTPUT_FORMAT_TYPE1
@@ -543,7 +544,7 @@ static void continuous_adc_init(adc_channel_t *channel, uint8_t channel_num, adc
     adc_cali_handle_t c_handle = NULL;
 
     adc_continuous_handle_cfg_t adc_config = {
-        .max_store_buf_size = 1024,
+        .max_store_buf_size = 4096,
         .conv_frame_size = EXAMPLE_READ_LEN,
     };
     ESP_ERROR_CHECK(adc_continuous_new_handle(&adc_config, &handle));
@@ -595,7 +596,7 @@ static void continuous_adc_init(adc_channel_t *channel, uint8_t channel_num, adc
 //
 //
 // ************
-int get_Vrms() {
+int get_Vrms(adc_continuous_handle_t handle, adc_cali_handle_t cali_handle) {
 
     esp_err_t ret;
     uint32_t ret_num = 0;
@@ -617,22 +618,22 @@ int get_Vrms() {
 
     s_task_handle = xTaskGetCurrentTaskHandle();
 
-    adc_continuous_handle_t handle = NULL;
-    adc_cali_handle_t cali_handle = NULL;
+    // adc_continuous_handle_t handle = NULL;
+    // adc_cali_handle_t cali_handle = NULL;
 
     // ESP_LOGI(TAG, "about to call continuous_adc_initadc_init()...");
-    continuous_adc_init(channel, sizeof(channel) / sizeof(adc_channel_t), &handle, &cali_handle);
+    // continuous_adc_init(channel, sizeof(channel) / sizeof(adc_channel_t), &handle, &cali_handle);
     // ESP_LOGI(TAG, "called continuous_adc_init()...");
 
-    adc_continuous_evt_cbs_t cbs = {
-        .on_conv_done = s_conv_done_cb,
-    };
-    ESP_ERROR_CHECK(adc_continuous_register_event_callbacks(handle, &cbs, NULL));
-    ESP_ERROR_CHECK(adc_continuous_start(handle));
+    // adc_continuous_evt_cbs_t cbs = {
+    //     .on_conv_done = s_conv_done_cb,
+    // };
+    // ESP_ERROR_CHECK(adc_continuous_register_event_callbacks(handle, &cbs, NULL));
+    // ESP_ERROR_CHECK(adc_continuous_start(handle));
 
     // ESP_LOGI(TAG, "Starting sample loop...");
 
-    while(j<NUMBER_OF_SAMPLES) {
+    // while(j<NUMBER_OF_SAMPLES) {
         /**
          * This is to show you the way to use the ADC continuous mode driver event callback.
          * This `ulTaskNotifyTake` will block when the data processing in the task is fast.
@@ -667,7 +668,9 @@ int get_Vrms() {
                 ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, Vout, &Vr));
                 // ESP_LOGI(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", ADC_UNIT_1 + 1, EXAMPLE_ADC1_CHAN0, voltage[0][0]);
                 // ESP_LOGI(TAG, "%i: p->type1.data:%i V:%i  Vr:%i",i,(int) p->type1.data, V,Vr);
-                V += Vr;
+                voltage[samples]=Vr;
+                voltage_copy[samples]=Vr;
+
                 // Vr+= Vout;
                 if (p->type1.data > 0xfff) ESP_LOGI(TAG,"p->type1.data too big: %i",p->type1.data);
                 // if ((samples % 1000)==0) ESP_LOGI(TAG, "p->type1.data:%i Vout:%i",(int) p->type1.data, Vout);
@@ -676,12 +679,12 @@ int get_Vrms() {
             }
             // ESP_LOGI(TAG,"number of samples:%i  V:%i",samples,V); 
 
-            if (samples>0) {
-                Vsample=(int)(V/samples);  // Average value of the sampled voltage (sampled at 20KHz (or more!)
+            // if (samples>0) {
+            //     Vsample=(int)(V/samples);  // Average value of the sampled voltage (sampled at 20KHz (or more!)
                 // Vrawsample=(int)(Vr/samples);
                 samples=0;
                 // ESP_LOGI(TAG,"%i: Vrawsample:%i",j,Vrawsample);
-            }
+            // }
             /**
              * Because printing is slow, so every time you call `ulTaskNotifyTake`, it will immediately return.
              * To avoid a task watchdog timeout, add a delay here. When you replace the way you process the data,
@@ -694,27 +697,28 @@ int get_Vrms() {
             // break;
         }
     // }
-        if (j>NUMBER_OF_SAMPLES) ESP_LOGI(TAG,"j:%i\n",j);
-        if (Vsample>0xfff) ESP_LOGI(TAG,"Vsample too big: %i",Vsample);
+        // if (j>NUMBER_OF_SAMPLES) ESP_LOGI(TAG,"j:%i\n",j);
+        // if (Vsample>0xfff) ESP_LOGI(TAG,"Vsample too big: %i",Vsample);
 
-        voltage[j]= (uint16_t) Vsample&0xfff;
-        voltage_copy[j]= (uint16_t) Vsample&0xfff;
+        // voltage[j]= (uint16_t) Vsample&0xfff;
+        // voltage_copy[j]= (uint16_t) Vsample&0xfff;
+        // timestamp[j]=xTaskGetTickCount();  
         // ESP_LOGI(TAG,"in loop: voltage[%i]:%x    voltage_copy[%i]:%x",j,voltage[j],j,voltage_copy[j]);
         // voltage_raw[j]=sample&0xfff;
-        j++;
-    }
+    //     j++;
+    // }
 
-    int number_of_samples=j;
+    int number_of_samples=EXAMPLE_READ_LEN;
 
-    ESP_ERROR_CHECK(adc_continuous_stop(handle));
-    ESP_ERROR_CHECK(adc_continuous_deinit(handle));
+    // ESP_ERROR_CHECK(adc_continuous_stop(handle));
+    // ESP_ERROR_CHECK(adc_continuous_deinit(handle));
 
     // ESP_LOGI(TAG,"Length of voltage[] is: %i\n",sizeof(voltage)/sizeof(voltage[0]));
     // ESP_LOGI(TAG,"Length of voltage_copy[] is: %i\n",sizeof(voltage_copy)/sizeof(voltage_copy[0]));
 
     // ESP_LOGI(TAG,"calculating Vstr ...");
     
-    if (j>NUMBER_OF_SAMPLES) ESP_LOGI(TAG,"j > NUMBER_OF_SAMPLES:%i\n",j);
+    // if (j>NUMBER_OF_SAMPLES) ESP_LOGI(TAG,"j > NUMBER_OF_SAMPLES:%i\n",j);
 
     memset(Vstr,'\0',sizeof(Vstr)*sizeof(Vstr[0]));
     // Vstr[0]='\0';
@@ -732,11 +736,11 @@ int get_Vrms() {
     //     ESP_LOGI(TAG,"after sprintf: voltage[%i]:%x    voltage_copy[%i]:%x",i,voltage[i],i,voltage_copy[i]);
     //     };
 
-    // int n=0;
+    int n=0;
     // for (i=0;i<strlen(Vstr);i++) {if(Vstr[i]==',') n++;}
     // ESP_LOGI(TAG,"elements:%i voltage:%s\n",n,Vstr);
 
-    memset(Vstr,'\0',sizeof(Vstr)*sizeof(Vstr[0]));
+    // memset(Vstr,'\0',sizeof(Vstr)*sizeof(Vstr[0]));
 
     // for (i=0;i<number_of_samples;i++) {
     //     sprintf(Vstr+strlen(Vstr),"%x,",voltage_copy[i]);
@@ -747,7 +751,7 @@ int get_Vrms() {
     // ESP_LOGI(TAG,"elements:%i voltage_copy:%s\n",n,Vstr);
 
 
-    // n=0;
+    n=0;
     // Vstr_raw[0]='\0';
     // for (i=0;i<number_of_samples;i++) {
     //     sprintf(Vstr_raw+strlen(Vstr_raw),"%x,",0xfff&voltage_raw[i]);
@@ -759,13 +763,14 @@ int get_Vrms() {
 
     // ESP_LOGI(TAG,"voltage_copy:%i, (voltage_copy, sizeof(voltage_copy)/sizeof(voltage_copy[0]):%i, sizeof(voltage_copy[0]):%i",sizeof(voltage_copy), sizeof(voltage_copy)/sizeof(voltage_copy[0]), sizeof(voltage_copy[0]));  
 
-    // Vstr[0]='\0';
-    // for (i=0;i<number_of_samples;i++) {
-    //     sprintf(Vstr+strlen(Vstr),"%x,",voltage_copy[i]);
-    // };
-    // n=0;
-    // for (i=0;i<strlen(Vstr);i++) {if(Vstr[i]==',') n++;}
-    // ESP_LOGI(TAG,"elements:%i in not yet qsorted voltage_copy:%s\n",n,Vstr);
+    Vstr[0]='\0';
+    sprintf(Vstr+strlen(Vstr),"\nmS,mV\n");
+    for (i=0;i<number_of_samples;i++) {
+        sprintf(Vstr+strlen(Vstr),"%i,%i\n",i,voltage_copy[i]);
+    };
+    n=0;
+    for (i=0;i<strlen(Vstr);i++) {if(Vstr[i]==',') n++;}
+    ESP_LOGI(TAG,"elements:%i in not yet qsorted voltage_copy:%s\n",n,Vstr);
 
     // ESP_LOGI(TAG,"Start qsort");
     qsort(voltage_copy, sizeof(voltage_copy)/sizeof(voltage_copy[0]), sizeof(voltage_copy[0]), compare);  // sort the voltage array to get voltage bounds
@@ -774,7 +779,7 @@ int get_Vrms() {
     peak_voltage=voltage_copy[number_of_samples-1];
     median_voltage=voltage_copy[number_of_samples>>1];  // counter/2
     ESP_LOGW(TAG, "median_voltage:%i  least_voltage:%i  peak_voltage:%i",median_voltage, least_voltage, peak_voltage);
-    Vstr[0]='\0';for (i=0;i<number_of_samples;i++) {sprintf(Vstr+strlen(Vstr),"%x,",voltage_copy[i]);}; ESP_LOGI(TAG,"qsorted voltage_copy :%s\n\n",Vstr);
+    Vstr[0]='\0';for (i=0;i<number_of_samples;i++) {sprintf(Vstr+strlen(Vstr),"%x,",voltage_copy[i]);}; ESP_LOGI(TAG,"qsorted voltage_copy :%s",Vstr);
 
     // calculate RMS
     int Vac=0; //,bitflip=2;
@@ -842,9 +847,21 @@ void app_main(void)
 
     // start loop 
     // const TickType_t xDelay = 500;// / portTICK_PERIOD_MS;
+
+    adc_continuous_handle_t handle = NULL;
+    adc_cali_handle_t cali_handle = NULL;
+    continuous_adc_init(channel, sizeof(channel) / sizeof(adc_channel_t), &handle, &cali_handle);
+
+    adc_continuous_evt_cbs_t cbs = {
+        .on_conv_done = s_conv_done_cb,
+    };
+    ESP_ERROR_CHECK(adc_continuous_register_event_callbacks(handle, &cbs, NULL));
+    ESP_ERROR_CHECK(adc_continuous_start(handle));
+
+
     while (1) {
-        Vrms=get_Vrms();
-        ESP_LOGW(TAG,"\033[1;34m Vrms:%d (%x)  Vrms:%f",Vrms,Vrms,((double)Vrms/0xfff)*4.1);
+        Vrms=get_Vrms(handle, cali_handle);
+        ESP_LOGW(TAG,"\033[1;34m Vrms:%d (%x)  Vrms:%f\n",Vrms,Vrms,((double)Vrms/0xfff)*4.1);
         // Toggle the LED state 
         // ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
         gpio_set_level(GPIO_PIN, s_led_state); 
