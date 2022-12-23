@@ -27,17 +27,25 @@
 #include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_cali_scheme.h"
 #include "math.h"
-#include "esp_tls.h"
-#include "esp_http_client.h"
 
 /* A simple example that demonstrates how to create GET and POST
  * handlers for the web server.x
  */
 static uint8_t s_led_state = 0;
+// uint32_t reading;
+// uint32_t voltage;
+// char voltage_txt[5];
+
+// #define NUMBER_OF_SAMPLES 2048
+// uint16_t voltage[NUMBER_OF_SAMPLES];
+// uint16_t voltage_raw[NUMBER_OF_SAMPLES];
+// uint16_t voltage_copy[NUMBER_OF_SAMPLES];
+// int32_t timestamp[NUMBER_OF_SAMPLES];
+
+// char Vstr[NUMBER_OF_SAMPLES*10]; //leave lots of room - 10 characters for each entry
+// char Vstr_raw[NUMBER_OF_SAMPLES];
+
 static const char *TAG = "example";
-int voltage[2]={0,0};
-int test_voltage= -1;
-char voltage_display[5120];
 
 #if CONFIG_EXAMPLE_BASIC_AUTH
 
@@ -47,7 +55,6 @@ typedef struct {
 } basic_auth_info_t;
 
 #define HTTPD_401      "401 UNAUTHORIZED"           /*!< HTTP Response 401 */
-
 
 static char *http_auth_basic(const char *username, const char *password)
 {
@@ -164,7 +171,9 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
 {
     char*  buf;
     size_t buf_len;
-    char response[5000]={""};
+
+    ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
+    s_led_state = !s_led_state;
 
     /* Get header value string length and allocate memory for length + 1,
      * extra byte for null termination */
@@ -199,39 +208,30 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
     /* Read URL query string length and allocate memory for length + 1,
      * extra byte for null termination */
     buf_len = httpd_req_get_url_query_len(req) + 1;
-    char param1[32],param2[32],param3[32];
     if (buf_len > 1) {
         buf = malloc(buf_len);
         if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
             ESP_LOGI(TAG, "Found URL query => %s", buf);
-            // char param[32];
+            char param[32];
             /* Get value of expected key from query string */
-            if (httpd_query_key_value(buf, "state", param1, sizeof(param1)) == ESP_OK) {
-                ESP_LOGI(TAG, "Found URL query parameter => state=%s", param1);
+            if (httpd_query_key_value(buf, "query1", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => query1=%s", param);
             }
-            if (httpd_query_key_value(buf, "query3", param3, sizeof(param3)) == ESP_OK) {
-                ESP_LOGI(TAG, "Found URL query parameter => query3=%s", param3);
+            if (httpd_query_key_value(buf, "query3", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => query3=%s", param);
             }
-            if (httpd_query_key_value(buf, "refresh", param2, sizeof(param2)) == ESP_OK) {
-                ESP_LOGI(TAG, "Found URL query parameter => refresh=%s", param2);
+            if (httpd_query_key_value(buf, "query2", param, sizeof(param)) == ESP_OK) {
+                ESP_LOGI(TAG, "Found URL query parameter => query2=%s", param);
             }
         }
         free(buf);
     }
-    char *led_state_string;
 
-    ESP_LOGI(TAG,"param1:%s",param1);
-    if (strcmp(param1,"ON")==0)  s_led_state=1;
-    else if (strcmp(param1,"OFF")==0) s_led_state=0;
-    else s_led_state = !s_led_state;
+    char* led_state_string="OFF";
 
-    // ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
-    ESP_LOGI(TAG, "In /get handler point #1, s_led_state:%i",s_led_state);
-
-
-    led_state_string = (s_led_state == true ? "<h0 style=color:green>ON":"<h0 style=color:red>OFF");
-    // ESP_LOGI(TAG, "s_led_state is: %i", s_led_state);
-    // ESP_LOGI(TAG, "led state string is: %s",led_state_string);
+    led_state_string = (s_led_state == true ? "ON" : "OFF");
+    ESP_LOGI(TAG, "s_led_state is: %i", s_led_state);
+    ESP_LOGI(TAG, "led state string is: %s",led_state_string);
 
     /* Set some custom headers */
     httpd_resp_set_hdr(req, "Custom-Header-1", "Custom-Value-1");
@@ -239,102 +239,12 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
 
     /* Send response with custom headers and body set as the
      * string passed in user context*/
+    char foo[100];
+    strcpy(foo,req->user_ctx);
+    strcat(foo,led_state_string);
 
-    strcat(response,req->user_ctx);
-    strcat(response,led_state_string);
-
-    sprintf(response+strlen(response),\
-         "<div id=\"readout\">\
-<h0 style=color:red;font-family:Courier New>\
-Vrms:<strong id=\"Vrms\">%i</strong>\
-<br><h0 style=color:blue;font-family:Courier New>\
-Vave:<strong id=\"Vave\">%i</strong>\
-</div>"\
-,voltage[0],voltage[1]);
-
-    sprintf(response+strlen(response),"<script>\
-const url_ON=new URL(location.href);\
-const url_OFF=new URL(location.href);\
-url_ON.searchParams.set('state','ON');\
-url_OFF.searchParams.set('state','OFF');\
-</script>");     
-
-    sprintf(response+strlen(response),"<br><button style=background-color:#90EE90 type=button onClick=\"location.assign(url_ON.search);\"> ON</button>"); //add button
-    sprintf(response+strlen(response),"<button style=background-color:#FFCCCB type=button onClick=\"location.assign(url_OFF.search);\"> OFF</button>"); //add button
-
-    // sprintf(response+strlen(response),"<button type=button onClick=\"document.getElementById(\"readout\");\"> Reload</button>"); //add button
-
-    // sprintf(response+strlen(response),"<script> function foo(){console.log('foo');}</script>");
-
-    /* sprintf(response+strlen(response),"<script>\
-        function reload(){\
-            var container = document.getElementById(\"Vave\");\
-            container.innerHTML= %i;\
-            console.log(\"Vave container:\",container.innerHTML);\
-            };\
-        </script>",test_voltage); */
-
-    sprintf(response+strlen(response),"<button type=button onClick=\"fetchV();\"> fetchV</button>"); //add button
-    
-    sprintf(response+strlen(response),"<script> setInterval(() => {fetchV();}, 100); </script>");
-
-    sprintf(response+strlen(response),\
-        "<script>\
-        const voltage_display=[];\
-        async function fetchV () {\
-          let response = await fetch('/adc',{method:'GET'});\
-          if (!response.ok) {\
-            const message = `An error has occured: ${response.status}`;\
-            throw new Error(message);\
-            };\
-          response.text().then(function (text) {\
-            obj=JSON.parse(text);\
-            var container = document.getElementById(\"Vave\");\
-            container.innerHTML= obj.Vave;\
-            var container = document.getElementById(\"Vrms\");\
-            container.innerHTML= obj.Vrms;\
-            addData(vChart,'foo',obj.Vrms);\
-            });\
-        };</script>"); 
-
-    sprintf(response+strlen(response),"<script src='https://cdn.jsdelivr.net/npm/chart.js'></script>");
-
-    sprintf(response+strlen(response),"<canvas id=myChart style=\"width:30%%;height:20%%;max-width:700px\"></canvas>");
-
-    sprintf(response+strlen(response),"<script>\
-        var ctx=document.getElementById(\"myChart\");\
-        var vChart = new Chart(ctx, {\
-          type: 'line',\
-          data: {\
-            labels: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],\
-            datasets: [{ \
-                data: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20],\
-                label: \"Vrms\",\
-                borderColor: \"#c45850\",\
-                fill: false\
-              }\
-            ]\
-          },\
-          options: {\
-            title: {\
-              display: true,\
-              text: 'Vrms (in mV)'\
-            }\
-          }\
-        });\
-        function addData(chart, label, data) {\
-            chart.options.animation = false;\
-            chart.data.datasets.forEach((dataset) => {\
-                dataset.data.splice(0,0,data);\
-                dataset.data.pop();\
-            });\
-            chart.update();\
-            }\
-        </script>");
-        
     // const char* resp_str = (const char*) req->user_ctx;
-    ESP_LOGI(TAG,"Response length is:%i",strlen(response));
-    const char* resp_str = (const char*) response;
+    const char* resp_str = (const char*) foo;
 
     httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
 
@@ -343,7 +253,6 @@ url_OFF.searchParams.set('state','OFF');\
     if (httpd_req_get_hdr_value_len(req, "Host") == 0) {
         ESP_LOGI(TAG, "Request headers lost");
     }
-        // ESP_LOGI(TAG, "In /get handler point #2, s_led_state:%i",s_led_state);
     return ESP_OK;
 }
 
@@ -353,52 +262,49 @@ static const httpd_uri_t hello = {
     .handler   = hello_get_handler,
     /* Let's pass response string in user
      * context to demonstrate it's usage */
-    .user_ctx  = "<!DOCTYPE html>EV Charger is: "
+    .user_ctx  = "EV Charger is: "
 };
 /* An HTTP GET handler for reading ADC */
-static esp_err_t hello_adc_handler(httpd_req_t *req)
-{
-    // ESP_LOGI(TAG, "In /adc handler...");
+// static esp_err_t hello_adc_handler(httpd_req_t *req)
+// {
+//     /* Set some custom headers */
+//     httpd_resp_set_hdr(req, "Custom-Header-1", "Custom-Value-1");
+//     httpd_resp_set_hdr(req, "Custom-Header-2", "Custom-Value-2");
 
-    httpd_resp_set_type(req, "application/text");
+//     /* Send response with custom headers and body set as the
+//      * string passed in user context*/
+//     char foo[100];
+//     strcpy(foo,req->user_ctx);
+//     sprintf(voltage_txt,"%lu",voltage);
+//     strcat(foo,voltage_txt);
 
-    /* Send response with custom headers and body set as the
-     * string passed in user context*/
-    char response[100];
-    strcpy(response,req->user_ctx);
-    // sprintf(voltage_txt,"%u",voltage); 
-    sprintf(response+strlen(response),"{\"Vrms\":%i,\"Vave\":%i}",voltage[0],voltage[1]);
+//     // const char* resp_str = (const char*) req->user_ctx;
+//     const char* resp_str = (const char*) foo;
 
-    // const char* resp_str = (const char*) req->user_ctx;
-    // const char* resp_str = (const char*) response;
+//     httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
 
-    // httpd_resp_send(req, resp_str, HTTPD_RESP_USE_STRLEN);
-    // ESP_LOGI(TAG,"adc response length:%i",sizeof(response));
-    httpd_resp_send(req, response, HTTPD_RESP_USE_STRLEN);
+//     /* After sending the HTTP response the old HTTP request
+//      * headers are lost. Check if HTTP request headers can be read now. */
+//     // if (httpd_req_adc_hdr_value_len(req, "Host") == 0) {
+//     //     ESP_LOGI(TAG, "Request headers lost");
+//     // }
+//     return ESP_OK;
+// }
 
-    /* After sending the HTTP response the old HTTP request
-     * headers are lost. Check if HTTP request headers can be read now. */
-    // if (httpd_req_adc_hdr_value_len(req, "Host") == 0) {
-    //     ESP_LOGI(TAG, "Request headers lost");
-    // }
-    return ESP_OK;
-};
+// static const httpd_uri_t adc = {
+//     .uri       = "/adc",
+//     .method    = HTTP_GET,
+//     .handler   = hello_adc_handler,
+//     /* Let's pass response string in user
+//      * context to demonstrate it's usage */
+//     .user_ctx  = "ADC value is: "
+// };
 
-static const httpd_uri_t adc = {
-    .uri       = "/adc",
-    .method    = HTTP_GET,
-    .handler   = hello_adc_handler,
-    /* Let's pass response string in user
-     * context to demonstrate it's usage */
-    .user_ctx  = ""
-};
 /* An HTTP POST handler */
 static esp_err_t echo_post_handler(httpd_req_t *req)
 {
     char buf[100];
     int ret, remaining = req->content_len;
-
-    ESP_LOGI(TAG, "In /echo handler...");
 
     while (remaining > 0) {
         /* Read the data for the request */
@@ -419,9 +325,6 @@ static esp_err_t echo_post_handler(httpd_req_t *req)
         ESP_LOGI(TAG, "=========== RECEIVED DATA ==========");
         ESP_LOGI(TAG, "%.*s", ret, buf);
         ESP_LOGI(TAG, "====================================");
-        test_voltage=atoi(buf);
-
-        ESP_LOGI(TAG,"posted test_voltage:%i",test_voltage);
     }
 
     // End response
@@ -483,7 +386,6 @@ static esp_err_t ctrl_put_handler(httpd_req_t *req)
         ESP_LOGI(TAG, "Unregistering /hello and /echo URIs");
         httpd_unregister_uri(req->handle, "/hello");
         httpd_unregister_uri(req->handle, "/echo");
-        httpd_unregister_uri(req->handle, "/adc");
         /* Register the custom error handler */
         httpd_register_err_handler(req->handle, HTTPD_404_NOT_FOUND, http_404_error_handler);
     }
@@ -491,7 +393,6 @@ static esp_err_t ctrl_put_handler(httpd_req_t *req)
         ESP_LOGI(TAG, "Registering /hello and /echo URIs");
         httpd_register_uri_handler(req->handle, &hello);
         httpd_register_uri_handler(req->handle, &echo);
-        httpd_register_uri_handler(req->handle, &adc);
         /* Unregister custom error handler */
         httpd_register_err_handler(req->handle, HTTPD_404_NOT_FOUND, NULL);
     }
@@ -512,7 +413,6 @@ static httpd_handle_t start_webserver(void)
 {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-    config.stack_size=8192;
     config.lru_purge_enable = true;
 
     // Start the httpd server
@@ -521,7 +421,7 @@ static httpd_handle_t start_webserver(void)
         // Set URI handlers
         ESP_LOGI(TAG, "Registering URI handlers");
         httpd_register_uri_handler(server, &hello);
-        httpd_register_uri_handler(server, &adc);
+        // httpd_register_uri_handler(server, &adc);
         httpd_register_uri_handler(server, &echo);
         httpd_register_uri_handler(server, &ctrl);
         #if CONFIG_EXAMPLE_BASIC_AUTH
@@ -698,52 +598,229 @@ static void continuous_adc_init(adc_channel_t *channel, uint8_t channel_num, adc
 //
 // ************
 int * get_Vrms(adc_continuous_handle_t handle, adc_cali_handle_t cali_handle) {
+
     esp_err_t ret;
     uint32_t ret_num = 0;
     uint8_t result[EXAMPLE_READ_LEN];
     // memset(result, 0xcc, EXAMPLE_READ_LEN);
-    int i=0,V=0,Vave=0;
+    int i=0;
+    int V=0;
+    // uint16_t Vsample=0;
+    // uint16_t Vrawsample=0;
+    // uint16_t Vout;
+    int Vave=0;
     long long int Vsquared=0, Vsquared_mean=0, Vsum=0;
     static int Vret[2];
 
+    // uint16_t least_voltage,peak_voltage,median_voltage;
+    // ESP_LOGI(TAG, "Starting get_Vrms...");
+
+    // int samples=0;
+
+    // memset(voltage,0,NUMBER_OF_SAMPLES*sizeof(voltage[0]));
+    // memset(voltage_copy,0,NUMBER_OF_SAMPLES*sizeof(voltage_copy[0]));
+    // memset(voltage_raw,0,NUMBER_OF_SAMPLES*sizeof(voltage_raw[0]));
+
     s_task_handle = xTaskGetCurrentTaskHandle();
 
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    // adc_continuous_handle_t handle = NULL;
+    // adc_cali_handle_t cali_handle = NULL;
 
-    // ret = adc_continuous_start(handle);
-   
-    ret = adc_continuous_read(handle, result, EXAMPLE_READ_LEN, &ret_num, 0);
-    if (ret == ESP_OK) {
-        // calculate Vave so that the Vrms (adjusted for Vave=DC bias) can be calculated
-        int samples=0;
-        for (i = 0;i < ret_num;i += SOC_ADC_DIGI_RESULT_BYTES) {
-            adc_digi_output_data_t *p = (void*)&result[i];
-            ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, p->type1.data, &V));
-            Vsum+=V;
-            samples++;
-            }
-        Vave=(samples>0)?Vsum/samples:0;
-        samples=0;
-        for (i = 0;i < ret_num;i += SOC_ADC_DIGI_RESULT_BYTES) {
-            adc_digi_output_data_t *p = (void*)&result[i];
-            ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, p->type1.data, &V));
-            Vsquared+=(V-Vave)*(V-Vave);
-            samples++;
-            }
-        Vsquared_mean=(samples>0)?Vsquared/samples:0;
-        
+    // ESP_LOGI(TAG, "about to call continuous_adc_initadc_init()...");
+    // continuous_adc_init(channel, sizeof(channel) / sizeof(adc_channel_t), &handle, &cali_handle);
+    // ESP_LOGI(TAG, "called continuous_adc_init()...");
+
+    // adc_continuous_evt_cbs_t cbs = {
+    //     .on_conv_done = s_conv_done_cb,
+    // };
+    // ESP_ERROR_CHECK(adc_continuous_register_event_callbacks(handle, &cbs, NULL));
+    // ESP_ERROR_CHECK(adc_continuous_start(handle));
+
+    // ESP_LOGI(TAG, "Starting sample loop...");
+
+    // while(j<NUMBER_OF_SAMPLES) {
         /**
-         * Because printing is slow, so every time you call `ulTaskNotifyTake`, it will immediately return.
-         * To avoid a task watchdog timeout, add a delay here. When you replace the way you process the data,
-         * usually you don't need this delay (as this task will block for a while).
+         * This is to show you the way to use the ADC continuous mode driver event callback.
+         * This `ulTaskNotifyTake` will block when the data processing in the task is fast.
+         * However in this example, the data processing (print) is slow, so you barely block here.
+         *
+         * Without using this event callback (to notify this task), you can still just call
+         * `adc_continuous_read()` here in a loop, with/without a certain block timeout.
          */
-        // vTaskDelay(1);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        // ret = adc_continuous_start(handle);
+       
+        ret = adc_continuous_read(handle, result, EXAMPLE_READ_LEN, &ret_num, 0);
+        if (ret == ESP_OK) {
+            // ESP_LOGI("TASK", "ret is %x, ret_num is %"PRIu32, ret, ret_num);
+            // V=0;
+            // int Vr=0;
+            // Vstr[0]='\0';
+            // Vstr_raw[0]='\0';
+
+            // for (i=0;i<0xfff;i++) {
+            //     ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, i, &Vr));
+            //     ESP_LOGI(TAG, "adc_cali_raw_to_voltage:  input:%x  output %x",i,Vr);
+            // };
+
+            int samples=0;
+            for (i = 0;i < ret_num;i += SOC_ADC_DIGI_RESULT_BYTES) {
+                adc_digi_output_data_t *p = (void*)&result[i];
+                // ESP_LOGI(TAG, "Unit: %d, Channel: %d, Value: %x", 1, p->type1.channel, p->type1.data);
+                // ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, (int) p->type1.data, &Vout));
+                // Vout=p->type1.data;
+
+                ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, p->type1.data, &V));
+                // Vsquared+=(V-Vave)*(V-Vave);
+                Vsum+=V;
+
+                // ESP_LOGI(TAG, "ADC%d Channel[%d] Cali Voltage: %d mV", ADC_UNIT_1 + 1, EXAMPLE_ADC1_CHAN0, voltage[0][0]);
+                // ESP_LOGI(TAG, "%i: p->type1.data:%i V:%i ",i,(int) p->type1.data, V);
+                // voltage[samples]=Vr;
+                // voltage_copy[samples]=Vr;
+
+                // Vr+= Vout;
+                // if (p->type1.data > 0xfff) ESP_LOGI(TAG,"p->type1.data too big: %i",p->type1.data);
+                // if ((samples % 1000)==0) ESP_LOGI(TAG, "p->type1.data:%i Vout:%i",(int) p->type1.data, Vout);
+
+                samples++;
+            }
+            Vave=(samples>0)?Vsum/samples:0;
+            samples=0;
+            for (i = 0;i < ret_num;i += SOC_ADC_DIGI_RESULT_BYTES) {
+                adc_digi_output_data_t *p = (void*)&result[i];
+                // ESP_LOGI(TAG, "Unit: %d, Channel: %d, Value: %x", 1, p->type1.channel, p->type1.data);
+                // ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, (int) p->type1.data, &Vout));
+                // Vout=p->type1.data;
+
+                ESP_ERROR_CHECK(adc_cali_raw_to_voltage(cali_handle, p->type1.data, &V));
+                Vsquared+=(V-Vave)*(V-Vave);
+                samples++;
+            }
+            Vsquared_mean=(samples>0)?Vsquared/samples:0;
+            
+            // ESP_LOGI(TAG,"number of samples:%i  V:%i",samples,V); 
+
+            // if (samples>0) {
+            //     Vsample=(int)(V/samples);  // Average value of the sampled voltage (sampled at 20KHz (or more!)
+                // Vrawsample=(int)(Vr/samples);
+                // samples=0;
+                // ESP_LOGI(TAG,"%i: Vrawsample:%i",j,Vrawsample);
+            // }
+            /**
+             * Because printing is slow, so every time you call `ulTaskNotifyTake`, it will immediately return.
+             * To avoid a task watchdog timeout, add a delay here. When you replace the way you process the data,
+             * usually you don't need this delay (as this task will block for a while).
+             */
+            // vTaskDelay(1);
         } else if (ret == ESP_ERR_TIMEOUT) {
             // j=NUMBER_OF_SAMPLES;
             ESP_LOGI(TAG,"ESP_ERR_TIMEOUT");
             // break;
         }
-   
+    // }
+        // if (j>NUMBER_OF_SAMPLES) ESP_LOGI(TAG,"j:%i\n",j);
+        // if (Vsample>0xfff) ESP_LOGI(TAG,"Vsample too big: %i",Vsample);
+
+        // voltage[j]= (uint16_t) Vsample&0xfff;
+        // voltage_copy[j]= (uint16_t) Vsample&0xfff;
+        // timestamp[j]=xTaskGetTickCount();  
+        // ESP_LOGI(TAG,"in loop: voltage[%i]:%x    voltage_copy[%i]:%x",j,voltage[j],j,voltage_copy[j]);
+        // voltage_raw[j]=sample&0xfff;
+    //     j++;
+    // }
+
+    // int number_of_samples=EXAMPLE_READ_LEN;
+
+    // ESP_ERROR_CHECK(adc_continuous_stop(handle));
+    // ESP_ERROR_CHECK(adc_continuous_deinit(handle));
+
+    // ESP_LOGI(TAG,"Length of voltage[] is: %i\n",sizeof(voltage)/sizeof(voltage[0]));
+    // ESP_LOGI(TAG,"Length of voltage_copy[] is: %i\n",sizeof(voltage_copy)/sizeof(voltage_copy[0]));
+
+    // ESP_LOGI(TAG,"calculating Vstr ...");
+    
+    // if (j>NUMBER_OF_SAMPLES) ESP_LOGI(TAG,"j > NUMBER_OF_SAMPLES:%i\n",j);
+
+    // memset(Vstr,'\0',sizeof(Vstr)*sizeof(Vstr[0]));
+    // Vstr[0]='\0';
+
+    // for (i=0;i<NUMBER_OF_SAMPLES;i++) {
+    //     ESP_LOGI(TAG,"before sprintf: voltage[%i]:%x    voltage_copy[%i]:%x",i,voltage[i],i,voltage_copy[i]);
+    //     }
+
+    // for (i=0;i<number_of_samples;i++) {
+    //     sprintf(Vstr+strlen(Vstr),"%x,",(unsigned int)voltage[i]);
+    //     // ESP_LOGI(TAG,"voltage[%i]:%x",i,(int)voltage[i]);
+    // };
+
+    // for (i=0;i<NUMBER_OF_SAMPLES;i++) {
+    //     ESP_LOGI(TAG,"after sprintf: voltage[%i]:%x    voltage_copy[%i]:%x",i,voltage[i],i,voltage_copy[i]);
+    //     };
+
+    // int n=0;
+    // for (i=0;i<strlen(Vstr);i++) {if(Vstr[i]==',') n++;}
+    // ESP_LOGI(TAG,"elements:%i voltage:%s\n",n,Vstr);
+
+    // memset(Vstr,'\0',sizeof(Vstr)*sizeof(Vstr[0]));
+
+    // for (i=0;i<number_of_samples;i++) {
+    //     sprintf(Vstr+strlen(Vstr),"%x,",voltage_copy[i]);
+        // ESP_LOGI(TAG,"voltage_copy[%i]:%x",i,(int)voltage_copy[i]);
+    // };
+    // n=0;
+    // for (i=0;i<strlen(Vstr);i++) {if(Vstr[i]==',') n++;}
+    // ESP_LOGI(TAG,"elements:%i voltage_copy:%s\n",n,Vstr);
+
+
+    // n=0;
+    // Vstr_raw[0]='\0';
+    // for (i=0;i<number_of_samples;i++) {
+    //     sprintf(Vstr_raw+strlen(Vstr_raw),"%x,",0xfff&voltage_raw[i]);
+    // };
+    // for (i=0;i<strlen(Vstr_raw);i++) {if(Vstr_raw[i]==',') n++;}
+    // ESP_LOGI(TAG,"elements:%i voltage_raw:%s\n",n,Vstr_raw);
+
+    // ESP_LOGI(TAG, "About to qsort...");
+
+    // ESP_LOGI(TAG,"voltage_copy:%i, (voltage_copy, sizeof(voltage_copy)/sizeof(voltage_copy[0]):%i, sizeof(voltage_copy[0]):%i",sizeof(voltage_copy), sizeof(voltage_copy)/sizeof(voltage_copy[0]), sizeof(voltage_copy[0]));  
+
+    // Vstr[0]='\0';
+    // sprintf(Vstr+strlen(Vstr),"\nmS,mV\n");
+    // for (i=0;i<number_of_samples;i++) {
+    //     sprintf(Vstr+strlen(Vstr),"%i,%i\n",i,voltage_copy[i]);
+    // };
+    // n=0;
+    // for (i=0;i<strlen(Vstr);i++) {if(Vstr[i]==',') n++;}
+    // ESP_LOGI(TAG,"elements:%i in not yet qsorted voltage_copy:%s\n",n,Vstr);
+
+    // // ESP_LOGI(TAG,"Start qsort");
+    // qsort(voltage_copy, sizeof(voltage_copy)/sizeof(voltage_copy[0]), sizeof(voltage_copy[0]), compare);  // sort the voltage array to get voltage bounds
+    // // ESP_LOGI(TAG,"Finish qsort");
+    // least_voltage=voltage_copy[0];
+    // peak_voltage=voltage_copy[number_of_samples-1];
+    // median_voltage=voltage_copy[number_of_samples>>1];  // counter/2
+    // ESP_LOGW(TAG, "median_voltage:%i  least_voltage:%i  peak_voltage:%i",median_voltage, least_voltage, peak_voltage);
+    // Vstr[0]='\0';for (i=0;i<number_of_samples;i++) {sprintf(Vstr+strlen(Vstr),"%x,",voltage_copy[i]);}; ESP_LOGI(TAG,"qsorted voltage_copy :%s",Vstr);
+
+    // calculate RMS
+    // int Vac=0; //,bitflip=2;
+    // long long int Vrms=0;
+    // int Vave=0;
+    // for (i=0;i<number_of_samples;i++) {
+    //     Vac=((int)voltage[i]&0xfff)-median_voltage;
+    //     Vrms+= Vac*Vac;
+    //     // ESP_LOGI(TAG,"Vac[%i]:%i    sum(Vrms):%lli  voltage[i]:%i    median_voltage:%i",i,Vac,Vrms,voltage[i]&0xfff,median_voltage);
+    //     Vave+=(Vac+median_voltage);
+    //     // if (Vac*(voltage[i-1]-median_voltage)<0) {bitflip++;}
+    //     // ESP_LOGI("Voltage,  ","Bitflip:%i",bitflip);
+    // }
+    // ESP_LOGI(TAG,"Sum of Vac squared:%lli   number_of_samples: %i",Vrms,number_of_samples);
+    // ESP_LOGI(TAG,"Sum of Vac squared/number_of_samples: %lli",(long long int)(Vrms/number_of_samples));
+    // ESP_LOGI(TAG,"sqrt(Vac squared/number_of_samples): %f",sqrt(Vrms/number_of_samples));
+    // Vrms=(int)sqrt(Vrms/number_of_samples); // root of mean of voltages squared
+
     // Vave=Vave/number_of_samples;
     // ESP_LOGW(TAG,"\033[1;35m Vave:%lli (%llx) Vave:%.2f",Vave,Vave,(double)Vave/0xfff*4.1);
     Vret[0]=(int)sqrt(Vsquared_mean);
@@ -779,85 +856,9 @@ httpd_handle_t start_wifi_and_webserver() {
     return server;
 }
 // ************ 
-esp_err_t _http_event_handler(esp_http_client_event_t *evt)
-{
-    static char *output_buffer;  // Buffer to store response of http request from event handler
-    static int output_len;       // Stores number of bytes read
-    switch(evt->event_id) {
-        case HTTP_EVENT_ERROR:
-            ESP_LOGD(TAG, "HTTP_EVENT_ERROR");
-            break;
-        case HTTP_EVENT_ON_CONNECTED:
-            ESP_LOGD(TAG, "HTTP_EVENT_ON_CONNECTED");
-            break;
-        case HTTP_EVENT_HEADER_SENT:
-            ESP_LOGD(TAG, "HTTP_EVENT_HEADER_SENT");
-            break;
-        case HTTP_EVENT_ON_HEADER:
-            ESP_LOGD(TAG, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
-            break;
-        case HTTP_EVENT_ON_DATA:
-            ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
-            /*
-             *  Check for chunked encoding is added as the URL for chunked encoding used in this example returns binary data.
-             *  However, event handler can also be used in case chunked encoding is used.
-             */
-            if (!esp_http_client_is_chunked_response(evt->client)) {
-                // If user_data buffer is configured, copy the response into the buffer
-                if (evt->user_data) {
-                    memcpy(evt->user_data + output_len, evt->data, evt->data_len);
-                } else {
-                    if (output_buffer == NULL) {
-                        output_buffer = (char *) malloc(esp_http_client_get_content_length(evt->client));
-                        output_len = 0;
-                        if (output_buffer == NULL) {
-                            ESP_LOGE(TAG, "Failed to allocate memory for output buffer");
-                            return ESP_FAIL;
-                        }
-                    }
-                    memcpy(output_buffer + output_len, evt->data, evt->data_len);
-                }
-                output_len += evt->data_len;
-            }
-
-            break;
-        case HTTP_EVENT_ON_FINISH:
-            ESP_LOGD(TAG, "HTTP_EVENT_ON_FINISH");
-            if (output_buffer != NULL) {
-                // Response is accumulated in output_buffer. Uncomment the below line to print the accumulated response
-                // ESP_LOG_BUFFER_HEX(TAG, output_buffer, output_len);
-                free(output_buffer);
-                output_buffer = NULL;
-            }
-            output_len = 0;
-            break;
-        case HTTP_EVENT_DISCONNECTED:
-            ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
-            int mbedtls_err = 0;
-            esp_err_t err = esp_tls_get_and_clear_last_error((esp_tls_error_handle_t)evt->data, &mbedtls_err, NULL);
-            if (err != 0) {
-                ESP_LOGI(TAG, "Last esp error code: 0x%x", err);
-                ESP_LOGI(TAG, "Last mbedtls failure: 0x%x", mbedtls_err);
-            }
-            if (output_buffer != NULL) {
-                free(output_buffer);
-                output_buffer = NULL;
-            }
-            output_len = 0;
-            break;
-        case HTTP_EVENT_REDIRECT:
-            ESP_LOGD(TAG, "HTTP_EVENT_REDIRECT");
-            esp_http_client_set_header(evt->client, "From", "user@example.com");
-            esp_http_client_set_header(evt->client, "Accept", "text/html");
-            esp_http_client_set_redirection(evt->client);
-            break;
-    }
-    return ESP_OK;
-}
-////////////
 void app_main(void)
 {
-    start_wifi_and_webserver();
+    // start_wifi_and_webserver();
 
     // initialize relay control GPIO
     #define GPIO_PIN 18
@@ -865,6 +866,7 @@ void app_main(void)
      // Set the GPIO as a push/pull output
     gpio_set_direction(GPIO_PIN, GPIO_MODE_OUTPUT);
     gpio_set_level(GPIO_PIN, false);
+    static uint8_t s_led_state = 0;
 
     int Vrms = 0, Vave=0;
 
@@ -887,41 +889,11 @@ void app_main(void)
         Vret=get_Vrms(handle, cali_handle);
         Vrms=Vret[0];
         Vave=Vret[1];
-        voltage[0]=Vrms;
-        voltage[1]=Vave;
-        // ESP_LOGW(TAG,"\033[1;34m Vrms:%.3f   Vave:%.3f",((float)Vrms/0xfff)*4.1,((float)Vave/0xfff)*4.1);
+        ESP_LOGW(TAG,"\033[1;34m Vrms:%.3f   Vave:%.3f",((float)Vrms/0xfff)*4.1,((float)Vave/0xfff)*4.1);
         // Toggle the LED state 
         // ESP_LOGI(TAG, "Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
-        // ESP_LOGI(TAG, "In main, handler, s_led_state:%i",s_led_state);
         gpio_set_level(GPIO_PIN, s_led_state); 
         // vTaskDelay(xDelay);
-
-
-        // char local_response_buffer[10] = {0};
-        // esp_http_client_config_t config;
-        // config.host = "192.168.3.143";
-        // config.path = "/post";
-        //     // .query = "esp",
-        // config.event_handler = _http_event_handler;
-        // config.user_data = local_response_buffer;        // Pass address of local buffer to get response
-        // config.disable_auto_redirect = true;
-        
-        // esp_http_client_handle_t client = esp_http_client_init(&config);
-        // POST
-        // const char *post_data = "{\"Vrms\":\"99\"}";
-        // esp_http_client_set_url(client, "http://airq");
-        // esp_http_client_set_method(client, HTTP_METHOD_POST);
-        // esp_http_client_set_header(client, "Content-Type", "application/json");
-        // esp_http_client_set_post_field(client, post_data, strlen(post_data));
-        // esp_err_t err = esp_http_client_perform(client);
-        // if (err == ESP_OK) {
-        //     ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %lld",
-        //             esp_http_client_get_status_code(client),
-        //             esp_http_client_get_content_length(client));
-        // } else {
-        //     ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
-        // }
-
     }
     ESP_ERROR_CHECK(adc_continuous_stop(handle));
     ESP_ERROR_CHECK(adc_continuous_deinit(handle));
