@@ -86,3 +86,6 @@
 [submodule "components/heap/tlsf"]
 	path = components/heap/tlsf
 	url = ../../espressif/tlsf.git
+[submodule "examples/peripherals/lcd/i2c_oled/components/lvgl"]
+	path = examples/peripherals/lcd/i2c_oled/components/lvgl
+	url = https://github.com/lvgl/lvgl.git
