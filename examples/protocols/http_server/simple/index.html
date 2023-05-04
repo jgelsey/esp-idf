@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>EV Charger Control</title>
+	<style>
+		#onoff {
+			background-color: #4CAF50;
+			border: none;
+			color: white;
+			padding: 15px 32px;
+			text-align: center;
+			text-decoration: none;
+			display: inline-block;
+			font-size: 16px;
+			margin: 4px 2px;
+			cursor: pointer;
+		}
+	</style>
+</head>
+<body>
+
+<h2>EV Charger Control</h2>
+
+<button id="onoff" onclick="sendRequest(1)">ON</button>
+<button id="onoff" onclick="sendRequest(-1)">OFF</button>
+
+<script>
+	function sendRequest(value) {
+		var xhttp = new XMLHttpRequest();
+		xhttp.open("GET", "https://device.juicier.net/control?devid=123&cmd=set&key=chargecurrent&value=" + value, true);
+		xhttp.send();
+	}
+</script>
+
+</body>
+</html>
